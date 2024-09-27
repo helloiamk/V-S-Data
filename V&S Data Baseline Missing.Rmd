@@ -136,3 +136,22 @@ for (col in c("QID258", "QID259")) {
 
 ```
 
+```{r}
+# Replace values to missing codes: -99 (completely missing), -98 (skipped due to logic), -97 (don't know)
+# Ensure all relevant columns are treated as characters before replacement
+missing_codes <- c("-99", "-98", "-97")
+
+# Create a function to summarize missing codes by StudyID
+missing_summary <- V_S_Baseline %>%
+  select(StudyID, starts_with("QID")) %>%   
+  gather(key = "Question", value = "Response", -StudyID) %>%
+  filter(Response %in% missing_codes) %>%
+  group_by(StudyID, Response) %>%
+  summarise(Count = n()) %>%
+  spread(key = Response, value = Count, fill = 0) %>%
+  rename(`-99` = `-99`, `-98` = `-98`, `-97` = `-97`)
+
+# Display the summary table
+print(missing_summary)
+```
+
