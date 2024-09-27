@@ -1,0 +1,138 @@
+---
+title: "V&D Baseline Missing"
+author: "Ruiling Kang"
+date: "2024-09-26"
+output: pdf_document
+---
+```{r}
+# Load necessary libraries
+library(readxl)
+library(dplyr)
+library(readr)
+library(tidyr)
+```
+
+```{r}
+# Read in the SMS data using the readxl package
+SMS_Data <- read_excel("SMS Data.09.03.24.xlsx", skip = 1)
+
+
+# Filter out Participation Status = Done and Study Status = All Participation Complete or Compensation Sent
+SMS_Data <- SMS_Data %>%
+  filter(`Participation Status` == "Done", 
+         `Study Status` %in% c("All Participation Complete", "Compensation Sent"))
+
+# Count the number of unique StudyID
+uniqueStudyID <- SMS_Data %>%
+  distinct(StudyID)
+
+uniqueStudyID_count <- nrow(uniqueStudyID)
+
+# Print the uniqueStudyID count
+uniqueStudyID_count
+
+
+```
+```{r}
+#check the uniqueStudyIDs
+uniqueStudyID
+```
+
+
+
+```{r}
+# Read and clean the V&S Baseline CSV file
+V_S_Baseline <- read_csv("V&S Baseline Survey_September 9, 2024_10.27.csv")
+
+V_S_Baseline <- V_S_Baseline %>%
+  select(StudyID, everything())
+
+
+V_S_Baseline <- V_S_Baseline %>%
+  # Remove rows with NA StudyID and convert StudyID to numeric and integer
+  filter(!is.na(StudyID) & !is.na(as.numeric(StudyID))) %>%
+  mutate(StudyID = as.integer(as.numeric(StudyID))) %>%
+  # Filter rows where StudyID matches uniqueStudyID and finished is 'True'
+  filter(StudyID %in% uniqueStudyID$StudyID, finished == "True")
+
+
+
+# Print the number of unique StudyIDs after filtering
+n_distinct(V_S_Baseline$StudyID)
+
+```
+
+
+```{r}
+V_S_Baseline$StudyID
+```
+
+
+```{r}
+# Check for StudyID values in uniqueStudyID that are not in V_S_Baseline
+missing_ids <- setdiff(uniqueStudyID$StudyID, V_S_Baseline$StudyID)
+
+# Display the missing StudyIDs
+missing_ids
+
+# Check for StudyID values in V_S_Baseline that are not in uniqueStudyID
+different_ids <- setdiff(V_S_Baseline$StudyID, uniqueStudyID$StudyID)
+
+# Display the different StudyIDs
+different_ids
+
+```
+There is one different id from test survey which is 4826
+And different_ids shows integer(0), it means that there are no StudyID values in V_S_Baseline that are not present in uniqueStudyID. In other words, all the StudyID values in V_S_Baseline are also found in uniqueStudyID.
+
+```{r}
+# Drop unnecessary columns
+V_S_Baseline <- V_S_Baseline %>%
+  select(-startDate, -endDate, -status, -ipAddress, -recipientLastName, -recipientFirstName, 
+         -recipientEmail, -externalDataReference, -locationLatitude, -locationLongitude, 
+         -distributionChannel, -userLanguage)
+
+```
+
+
+Here for the missing bc of skip logic , code to -97.
+```{r}
+# Convert QID120 column to character
+V_S_Baseline$QID120 <- as.character(V_S_Baseline$QID120)
+
+# Replace NA with "-98" (as character) in the entire dataframe
+V_S_Baseline[is.na(V_S_Baseline)] <- "-98"
+
+# Check the first few rows to confirm
+head(V_S_Baseline)
+
+```
+
+don't know options recode to -97
+```{r}
+# Define the values to replace
+replace_values <- c("Don’t know")
+
+
+# Replace specified values with -97 in columns QID258 and QID259
+for (col in c('QID230', 'QID238', 'QID98', 'QID240', 'QID99', 'QID233',"QID258", "QID259")) {
+  V_S_Baseline[[col]][V_S_Baseline[[col]] %in% replace_values] <- -97
+}
+```
+
+
+
+```{r}
+
+# Define the values to replace
+replace_values <- c("Don't know")
+
+
+# Replace specified values with -97 in columns QID258 and QID259
+for (col in c("QID258", "QID259")) {
+  V_S_Baseline[[col]][V_S_Baseline[[col]] %in% replace_values] <- -97
+}
+
+
+```
+
