@@ -12,6 +12,7 @@ Load Libraries: Import readxl, dplyr, readr, and tidyr for data manipulation.
 
 Read & Filter SMS Data:
 Filter Participation Status = Done and Study Status = Complete/Compensation Sent.
+
 Extract unique StudyIDs.
 
 Read & Clean V&S Baseline Data:
@@ -22,4 +23,5 @@ Identify StudyIDs missing from V&S Baseline and vice versa.
 
 Data Cleaning:
 Drop unnecessary columns.
+
 Recode missing values as -98 and "Don't know" responses as -97.
