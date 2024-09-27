@@ -1,15 +1,14 @@
 ---
 title: "V&D Baseline Missing"
-author: "Ruiling Kang"
-date: "2024-09-26"
 output: pdf_document
 ---
-```{r}
+```{r,echo = FALSE, warning = FALSE, message = FALSE, echo = FALSE}
 # Load necessary libraries
 library(readxl)
 library(dplyr)
 library(readr)
 library(tidyr)
+library(kableExtra)
 ```
 
 ```{r}
@@ -138,7 +137,6 @@ for (col in c("QID258", "QID259")) {
 
 ```{r}
 # Replace values to missing codes: -99 (completely missing), -98 (skipped due to logic), -97 (don't know)
-# Ensure all relevant columns are treated as characters before replacement
 missing_codes <- c("-99", "-98", "-97")
 
 # Create a function to summarize missing codes by StudyID
@@ -152,6 +150,6 @@ missing_summary <- V_S_Baseline %>%
   rename(`-99` = `-99`, `-98` = `-98`, `-97` = `-97`)
 
 # Display the summary table
-print(missing_summary)
+kable(missing_summary)
 ```
 
