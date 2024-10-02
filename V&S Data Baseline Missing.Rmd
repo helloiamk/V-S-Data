@@ -1,6 +1,8 @@
 ---
-title: "V&D Baseline Missing"
-output: pdf_document
+title: "V&S Baseline Missing"
+output:
+  html_document:
+    df_print: paged
 ---
 ```{r,echo = FALSE, warning = FALSE, message = FALSE, echo = FALSE}
 # Load necessary libraries
@@ -135,11 +137,13 @@ for (col in c("QID258", "QID259")) {
 
 ```
 
+
+
 ```{r}
-# Replace values to missing codes: -99 (completely missing), -98 (skipped due to logic), -97 (don't know)
+# Define missing codes
 missing_codes <- c("-99", "-98", "-97")
 
-# Create a function to summarize missing codes by StudyID
+# Create a summary of missing codes by StudyID
 missing_summary <- V_S_Baseline %>%
   select(StudyID, starts_with("QID")) %>%   
   gather(key = "Question", value = "Response", -StudyID) %>%
@@ -149,7 +153,49 @@ missing_summary <- V_S_Baseline %>%
   spread(key = Response, value = Count, fill = 0) %>%
   rename(`-99` = `-99`, `-98` = `-98`, `-97` = `-97`)
 
-# Display the summary table
-kable(missing_summary)
+# Calculate means for each missing code column
+mean_99 <- mean(missing_summary$`-99`)
+mean_98 <- mean(missing_summary$`-98`)
+mean_97 <- mean(missing_summary$`-97`)
+
+mean_99
+mean_98
+mean_97
+
+# Add deviations from the mean to the summary table
+missing_summary <- missing_summary %>%
+  mutate(
+    `-97_dev` = `-97` - mean_97,
+    `-98_dev` = `-98` - mean_98,
+    `-99_dev` = `-99` - mean_99,
+  )
+
+
+```
+
+```{r}
+
+library(kableExtra)
+
+# Round the deviations for clarity
+missing_summary <- missing_summary %>%
+  mutate(
+    `-97_dev` = round(`-97_dev`, 2),
+    `-98_dev` = round(`-98_dev`, 2),
+    `-99_dev` = round(`-99_dev`, 2)
+  )
+
+# Create a more clearly table
+kable(missing_summary, format = "html", caption = "Missing Codes Summary with Deviations") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+  column_spec(1, bold = TRUE, border_right = TRUE) %>%  # Bold the StudyID 
+  column_spec(2:4, background = "#f9f9f9") %>% 
+  column_spec(5:7, background = "#f2f2f2", color = "red") %>%  
+  add_header_above(c(" " = 1, "Missing Count" = 3, "Deviation from Mean" = 3)) %>%
+  footnote(general = paste("Mean (-99):", round(mean_99, 2),
+                           "Mean (-98):", round(mean_98, 2),
+                           "Mean (-97):", round(mean_97, 2)),
+           general_title = "Summary Statistics")
+
 ```
 
