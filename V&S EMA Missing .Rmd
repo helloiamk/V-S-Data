@@ -1,0 +1,83 @@
+---
+title: "V&S EMA Missing"
+output: pdf_document
+---
+
+```{r,echo = FALSE, warning = FALSE, message = FALSE, echo = FALSE}
+# Load necessary libraries
+library(readxl)
+library(dplyr)
+library(readr)
+library(tidyr)
+library(kableExtra)
+```
+
+
+
+```{r}
+# Read in the SMS data using the readxl package
+SMS_Data <- read_excel("SMS Data.09.03.24.xlsx", skip = 1)
+
+
+# Filter out Participation Status = Done and Study Status = All Participation Complete or Compensation Sent
+SMS_Data <- SMS_Data %>%
+  filter(`Participation Status` == "Done", 
+         `Study Status` %in% c("All Participation Complete", "Compensation Sent"))
+
+# Count the number of unique StudyID
+uniqueStudyID <- SMS_Data %>%
+  distinct(StudyID)
+
+uniqueStudyID_count <- nrow(uniqueStudyID)
+
+# Print the uniqueStudyID count
+uniqueStudyID_count
+
+```
+
+
+```{r}
+
+# Read in the V&S Evening Survey
+evening_survey <- read.csv("V&S Evening Survey_September 30, 2024_17.01.csv", header = TRUE)
+
+# Read in the V&S Morning Survey
+morning_survey <- read.csv("V&S Morning Survey_September 30, 2024_17.01.csv", header = TRUE)
+
+# Read in the V&S 3Hours EMA Survey
+three_hours_ema_survey <- read.csv("V&S 3Hours EMA Survey_September 30, 2024_17.00.csv", header = TRUE)
+
+```
+
+
+```{r}
+# Ensure uniqueStudyID is a vector of StudyIDs
+study_ids <- uniqueStudyID$StudyID
+
+# Filter each survey to keep only records with matching StudyIDs
+filtered_evening_survey <- evening_survey %>% filter(StudyID %in% study_ids)
+filtered_morning_survey <- morning_survey %>% filter(StudyID %in% study_ids)
+filtered_three_hours_ema_survey <- three_hours_ema_survey %>% filter(StudyID %in% study_ids)
+
+```
+
+
+```{r}
+# For filtered evening survey
+filtered_evening_survey <- filtered_evening_survey %>%
+  select(StudyID, everything())
+
+# For filtered morning survey
+filtered_morning_survey <- filtered_morning_survey %>%
+  select(StudyID, everything())
+
+# For filtered 3-hours EMA survey
+filtered_three_hours_ema_survey <- filtered_three_hours_ema_survey %>%
+  select(StudyID, everything())
+```
+
+
+
+Merge data or separate?
+
+
