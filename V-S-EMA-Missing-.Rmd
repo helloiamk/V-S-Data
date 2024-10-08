@@ -1,0 +1,239 @@
+---
+title: "V&S EMA Missing"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r,echo = FALSE, warning = FALSE, message = FALSE, echo = FALSE}
+# Load necessary libraries
+library(readxl)
+library(dplyr)
+library(readr)
+library(tidyr)
+library(kableExtra)
+```
+
+
+
+```{r}
+# Read in the SMS data using the readxl package
+SMS_Data <- read_excel("SMS Data.09.03.24.xlsx", skip = 1)
+
+
+# Filter out Participation Status = Done and Study Status = All Participation Complete or Compensation Sent
+SMS_Data <- SMS_Data %>%
+  filter(`Participation Status` == "Done", 
+         `Study Status` %in% c("All Participation Complete", "Compensation Sent"))
+
+# Count the number of unique StudyID
+uniqueStudyID <- SMS_Data %>%
+  distinct(StudyID)
+
+uniqueStudyID_count <- nrow(uniqueStudyID)
+
+# Print the uniqueStudyID count
+uniqueStudyID_count
+
+```
+```{r}
+
+# Read in the V&S Evening Survey
+evening_survey <- read.csv("V&S Evening Survey_September 30, 2024_17.01.csv", header = TRUE)
+
+# Read in the V&S Morning Survey
+morning_survey <- read.csv("V&S Morning Survey_September 30, 2024_17.01.csv", header = TRUE)
+
+# Read in the V&S 3Hours EMA Survey
+three_hours_ema_survey <- read.csv("V&S 3Hours EMA Survey_September 30, 2024_17.00.csv", header = TRUE)
+
+```
+
+```{r}
+# Ensure uniqueStudyID is a vector of StudyIDs
+study_ids <- uniqueStudyID$StudyID
+
+# Filter each survey to keep only records with matching StudyIDs
+filtered_evening_survey <- evening_survey %>% filter(StudyID %in% study_ids)
+filtered_morning_survey <- morning_survey %>% filter(StudyID %in% study_ids)
+filtered_three_hours_ema_survey <- three_hours_ema_survey %>% filter(StudyID %in% study_ids)
+
+n_distinct(filtered_evening_survey$StudyID)
+n_distinct(filtered_morning_survey$StudyID)
+n_distinct(filtered_three_hours_ema_survey$StudyID)
+```
+
+```{r}
+# For filtered evening survey
+filtered_evening_survey <- filtered_evening_survey %>%
+  select(StudyID, everything())%>%
+  mutate(StudyHour = 6)
+
+# For filtered morning survey
+filtered_morning_survey <- filtered_morning_survey %>%
+  select(StudyID, everything())%>%
+  mutate(StudyHour = 1)
+
+# For filtered 3-hours EMA survey
+filtered_three_hours_ema_survey <- filtered_three_hours_ema_survey %>%
+  select(StudyID, everything())
+```
+
+# Data Cleaning
+
+```{r}
+# function to drop unnecessary columns
+drop_unnecessary_columns <- function(dataset) {
+  dataset %>%
+    select(-startDate, -endDate, -status, -ipAddress, -recipientLastName, -recipientFirstName, 
+           -recipientEmail, -externalDataReference, -locationLatitude, -locationLongitude, 
+           -distributionChannel, -userLanguage)
+}
+
+# Apply the function to the Morning Survey
+filtered_morning_survey <- drop_unnecessary_columns(filtered_morning_survey)
+
+# Apply the function to the Evening Survey
+filtered_evening_survey <- drop_unnecessary_columns(filtered_evening_survey)
+
+# Apply the function to the EMA Survey
+filtered_three_hours_ema_survey <- drop_unnecessary_columns(filtered_three_hours_ema_survey)
+
+```
+
+# Data Recode
+
+```{r}
+#recode
+filtered_morning_survey[is.na(filtered_morning_survey)] <- "-98"
+```
+
+### some null value truns into ' ' empty string
+
+```{r}
+# Check for total NA values
+total_na <- sum(is.na(filtered_morning_survey))
+
+# Check for total empty strings
+total_empty <- sum(filtered_morning_survey == "")
+
+print(paste("Total NA values:", total_na))
+print(paste("Total empty strings:", total_empty))
+```
+
+```{r}
+# Replace empty strings with "-98"
+filtered_morning_survey[filtered_morning_survey == ""] <- "-98"
+```
+
+```{r}
+# Final check for NA and empty strings
+na_remaining <- any(is.na(filtered_morning_survey))
+empty_remaining <- any(filtered_morning_survey == "")
+
+print(paste("Are there any NA values remaining?:", na_remaining))
+print(paste("Are there any empty strings remaining?:", empty_remaining))
+```
+
+```{r}
+filtered_evening_survey[is.na(filtered_evening_survey)] <- "-98"
+filtered_evening_survey[filtered_evening_survey == ""] <- "-98"
+```
+
+```{r}
+filtered_three_hours_ema_survey[is.na(filtered_three_hours_ema_survey)] <- "-98"
+filtered_three_hours_ema_survey[filtered_three_hours_ema_survey == ""] <- "-98"
+```
+
+#### we don't have 'don't know' options for all data sets here
+
+```{r}
+# Function to create a summary table for a given dataset
+create_missing_summary <- function(data, survey_name) {
+  # Define missing codes
+  missing_codes <- c("-99", "-98")
+
+  # Create a summary of missing codes by StudyID
+  missing_summary <- data %>%
+    select(StudyID, starts_with("QID")) %>%
+    gather(key = "Question", value = "Response", -StudyID) %>%
+    filter(Response %in% missing_codes) %>%
+    group_by(StudyID, Response) %>%
+    summarise(Count = n(), .groups = 'drop') %>%
+    spread(key = Response, value = Count, fill = 0) %>%
+    rename(`-99` = `-99`, `-98` = `-98`)
+
+  # Calculate means for each missing code column
+  mean_99 <- mean(missing_summary$`-99`)
+  mean_98 <- mean(missing_summary$`-98`)
+
+  # Add deviations from the mean to the summary table
+  missing_summary <- missing_summary %>%
+    mutate(
+      `-98_dev` = `-98` - mean_98,
+      `-99_dev` = `-99` - mean_99
+    )
+
+  # Round the deviations for clarity
+  missing_summary <- missing_summary %>%
+    mutate(
+      `-98_dev` = round(`-98_dev`, 2),
+      `-99_dev` = round(`-99_dev`, 2)
+    )
+
+  # Create a more clear table with kableExtra
+  kable(missing_summary, format = "html", caption = paste(survey_name, "Missing Codes Summary with Deviations")) %>%
+    kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive")) %>%
+    column_spec(1, bold = TRUE, border_right = TRUE) %>%  # Bold the StudyID 
+    column_spec(2:3, background = "#f9f9f9") %>% 
+    column_spec(4:5, background = "#f2f2f2", color = "red") %>%  
+    add_header_above(c(" " = 1, "Missing Count" = 2, "Deviation from Mean" = 2)) %>%
+    footnote(general = paste("Mean (-99):", round(mean_99, 2),
+                             "Mean (-98):", round(mean_98, 2)),
+             general_title = "Summary Statistics")
+}
+
+# Generate summary tables for morning, evening, and EMA surveys
+create_missing_summary(filtered_morning_survey, "Morning Survey")
+create_missing_summary(filtered_evening_survey, "Evening Survey")
+create_missing_summary(filtered_three_hours_ema_survey, "3-Hour EMA Survey")
+```
+
+
+
+```{r}
+# Convert all columns to character type before processing
+combined_surveys <- bind_rows(
+  filtered_morning_survey %>%
+    mutate(across(everything(), as.character)) %>%
+    mutate(SurveyType = "Morning"),
+  
+  filtered_evening_survey %>%
+    mutate(across(everything(), as.character)) %>%
+    mutate(SurveyType = "Evening"),
+  
+  filtered_three_hours_ema_survey %>%
+    mutate(across(everything(), as.character)) %>%
+    mutate(SurveyType = "EMA")
+)
+
+# Calculate the count of surveys for each StudyID, Day, and StudyHour
+survey_count <- combined_surveys %>%
+  group_by(StudyID, StudyDay, StudyHour) %>%
+  summarise(SurveyCount = n(), .groups = 'drop')
+
+# Create a wide format with columns for each day and StudyHour
+survey_count_wide <- survey_count %>%
+  unite(DayHour, StudyDay, StudyHour, sep = "_") %>%
+  spread(key = DayHour, value = SurveyCount, fill = 0)
+
+# View the wide format table
+survey_count_wide
+
+
+```
+
+
+
+
+
