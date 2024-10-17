@@ -64,19 +64,23 @@ n_distinct(filtered_three_hours_ema_survey$StudyID)
 ```
 
 ```{r}
-# For filtered evening survey
+# For filtered evening survey (including only finished surveys)
 filtered_evening_survey <- filtered_evening_survey %>%
-  select(StudyID, everything())%>%
+  filter(finished == 1) %>%  # Filter for finished surveys
+  select(StudyID, everything()) %>%
   mutate(StudyHour = 6)
 
-# For filtered morning survey
+# For filtered morning survey (including only finished surveys)
 filtered_morning_survey <- filtered_morning_survey %>%
-  select(StudyID, everything())%>%
+  filter(finished == 1) %>%  # Filter for finished surveys
+  select(StudyID, everything()) %>%
   mutate(StudyHour = 1)
 
-# For filtered 3-hours EMA survey
+# For filtered 3-hours EMA survey (including only finished surveys)
 filtered_three_hours_ema_survey <- filtered_three_hours_ema_survey %>%
+  filter(finished == 1) %>%  # Filter for finished surveys
   select(StudyID, everything())
+
 ```
 
 # Data Cleaning
@@ -234,6 +238,81 @@ survey_count_wide
 ```
 
 
+```{r}
+# Filter rows with counts of 2 or more
+survey_count_2plus <- survey_count_wide %>%
+  filter_if(is.numeric, any_vars(. >= 2))
 
+# Gather the columns back into key-value pairs so we can separate StudyDay and StudyHour
+survey_count_long <- survey_count_2plus %>%
+  gather(key = "DayHour", value = "SurveyCount", -StudyID) %>%
+  filter(SurveyCount >= 2)
 
+# Separate DayHour into StudyDay and StudyHour for filtering
+survey_count_long <- survey_count_long %>%
+  separate(DayHour, into = c("StudyDay", "StudyHour"), sep = "_", convert = TRUE)
+
+# View the table with StudyID, StudyDay, StudyHour, and SurveyCount
+survey_count_long
+
+```
+
+```{r}
+# Filter survey_count_long for morning duplicates (StudyHour == 1 and SurveyCount >= 2)
+morning_duplicates_long <- survey_count_long %>%
+  filter(StudyHour == 1, SurveyCount >= 2)
+
+# Ensure both datasets have the same data types for StudyDay and StudyHour
+filtered_morning_survey <- filtered_morning_survey %>%
+  mutate(StudyDay = as.integer(StudyDay), StudyHour = as.integer(StudyHour))
+
+morning_duplicates_long <- morning_duplicates_long %>%
+  mutate(StudyDay = as.integer(StudyDay), StudyHour = as.integer(StudyHour))
+
+# Use semi_join to filter only the duplicate data and then arrange by StudyID, StudyDay, and StudyHour
+morning_duplicates <- filtered_morning_survey %>%
+  semi_join(morning_duplicates_long, by = c("StudyID", "StudyDay", "StudyHour")) %>%
+  select(StudyID, StudyDay, StudyHour, QCount, recordedDate, everything()) %>%
+  arrange(StudyID, StudyDay, StudyHour)
+
+# View the filtered and sorted morning duplicate records
+morning_duplicates
+
+```
+
+```{r}
+# EMA survey duplicates
+ema_duplicates_long <- survey_count_long %>%
+  filter(SurveyCount >= 2, StudyHour %in% 2:5) %>%
+  select(StudyID, StudyDay, StudyHour, SurveyCount)
+
+# Ensure both datasets have the same data types for EMA survey
+filtered_three_hours_ema_survey <- filtered_three_hours_ema_survey %>%
+  mutate(StudyDay = as.integer(StudyDay), StudyHour = as.integer(StudyHour))
+
+ema_duplicates <- filtered_three_hours_ema_survey %>%
+  semi_join(ema_duplicates_long, by = c("StudyID", "StudyDay", "StudyHour")) %>%
+  select(StudyID, StudyDay, StudyHour, QCount, recordedDate, everything()) %>%
+  arrange(StudyID, StudyDay, StudyHour)
+
+ema_duplicates
+```
+
+```{r}
+# Evening survey duplicates
+evening_duplicates_long <- survey_count_long %>%
+  filter(SurveyCount >= 2, StudyHour == 6) %>%
+  select(StudyID, StudyDay, StudyHour, SurveyCount)
+
+# Ensure both datasets have the same data types for Evening survey
+filtered_evening_survey <- filtered_evening_survey %>%
+  mutate(StudyDay = as.integer(StudyDay), StudyHour = as.integer(StudyHour))
+
+evening_duplicates <- filtered_evening_survey %>%
+  semi_join(evening_duplicates_long, by = c("StudyID", "StudyDay", "StudyHour")) %>%
+  select(StudyID, StudyDay, StudyHour, QCount, recordedDate, everything()) %>%
+  arrange(StudyID, StudyDay, StudyHour)
+
+evening_duplicates
+```
 
