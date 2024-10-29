@@ -316,3 +316,18 @@ evening_duplicates <- filtered_evening_survey %>%
 evening_duplicates
 ```
 
+```{r}
+# Load the openxlsx library
+library(openxlsx)
+
+# Save morning duplicates to an Excel file
+write.xlsx(morning_duplicates, "morning_duplicates.xlsx", sheetName = "Morning Duplicates", overwrite = TRUE)
+
+# Save EMA duplicates to an Excel file
+write.xlsx(ema_duplicates, "ema_duplicates.xlsx", sheetName = "EMA Duplicates", overwrite = TRUE)
+
+# Save evening duplicates to an Excel file
+write.xlsx(evening_duplicates, "evening_duplicates.xlsx", sheetName = "Evening Duplicates", overwrite = TRUE)
+
+```
+
