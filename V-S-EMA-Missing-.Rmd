@@ -318,16 +318,74 @@ evening_duplicates
 
 ```{r}
 # Load the openxlsx library
-library(openxlsx)
+# library(openxlsx)
 
 # Save morning duplicates to an Excel file
-write.xlsx(morning_duplicates, "morning_duplicates.xlsx", sheetName = "Morning Duplicates", overwrite = TRUE)
+# write.xlsx(morning_duplicates, "morning_duplicates.xlsx", sheetName = "Morning Duplicates", overwrite = TRUE)
 
 # Save EMA duplicates to an Excel file
-write.xlsx(ema_duplicates, "ema_duplicates.xlsx", sheetName = "EMA Duplicates", overwrite = TRUE)
+# write.xlsx(ema_duplicates, "ema_duplicates.xlsx", sheetName = "EMA Duplicates", overwrite = TRUE)
 
 # Save evening duplicates to an Excel file
-write.xlsx(evening_duplicates, "evening_duplicates.xlsx", sheetName = "Evening Duplicates", overwrite = TRUE)
+# write.xlsx(evening_duplicates, "evening_duplicates.xlsx", sheetName = "Evening Duplicates", overwrite = TRUE)
 
 ```
+
+```{r}
+# Change to local path
+# Define a function to save highlighted differences to Excel
+generate_diff_excel <- function(df, output_file =  "C:/Users/kkk/Downloads/morning_duplicates_diff.xlsx") {
+  # Group by StudyID, StudyDay, and StudyHour to find duplicates
+  duplicates <- df %>%
+    group_by(StudyID, StudyDay, StudyHour) %>%
+    filter(n() > 1) %>%
+    ungroup()
+  
+  # Split duplicate groups for individual comparisons
+  duplicate_groups <- duplicates %>%
+    group_split(StudyID, StudyDay, StudyHour)
+  
+  # Create a new Excel workbook
+  wb <- createWorkbook()
+  
+  # Loop over each group of duplicates and highlight differences
+  for (i in seq_along(duplicate_groups)) {
+    group <- duplicate_groups[[i]]
+    reference_row <- group[1, ]
+    
+    # Add a sheet for each group
+    addWorksheet(wb, sheetName = paste("Group", i))
+    
+    # Write the data to the sheet
+    writeData(wb, sheet = i, group)  # Write original data
+    
+    # Highlight cells with differences
+    for (col in seq_along(group)) {
+      diff_rows <- which(group[[col]] != reference_row[[col]])
+      
+      if (length(diff_rows) > 0) {
+        style <- createStyle(bgFill = "yellow")  # Create a yellow style
+        addStyle(wb, sheet = i, style, rows = diff_rows + 1, cols = col, gridExpand = TRUE)
+      }
+    }
+  }
+  
+  # Save the workbook to the Downloads
+  saveWorkbook(wb, output_file, overwrite = TRUE)
+}
+
+# Call the function on the morning_duplicates table
+generate_diff_excel(morning_duplicates)
+
+```
+
+```{r}
+# Call the function on the evening_duplicates table
+generate_diff_excel(evening_duplicates, output_file = "C:/Users/kkk/Downloads/evening_duplicates_diff.xlsx")
+
+# Call the function on the ema_duplicates table
+generate_diff_excel(ema_duplicates, output_file = "C:/Users/kkk/Downloads/ema_duplicates_diff.xlsx")
+
+```
+
 
