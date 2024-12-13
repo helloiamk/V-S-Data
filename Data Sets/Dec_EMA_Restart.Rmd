@@ -1,0 +1,65 @@
+
+```{r}
+## Load necessary libraries
+library(readxl)
+library(dplyr)
+library(tidyr)
+library(readr)
+```
+
+
+```{r}
+## Load EMA Data
+DEC_EMA <- read.csv("V&S 3Hours EMA Survey_December 12, 2024_15.55.csv", header = TRUE)
+```
+
+```{r}
+## Filter EMA Data by Study IDs
+filtered_DEC_EMA <- DEC_EMA %>% 
+  filter(StudyID %in% study_ids) %>% 
+  select(StudyID, QCount,finished, everything())
+```
+
+```{r}
+## Calculate Survey Counts
+survey_count_DEC_EMA <- filtered_DEC_EMA %>%
+  group_by(StudyID, StudyDay, StudyHour) %>%
+  summarise(SurveyCount = n(), .groups = 'drop')
+```
+
+```{r}
+## Transform to Wide Format
+survey_count_wide_DEC_EMA <- survey_count_DEC_EMA %>%
+  unite(DayHour, StudyDay, StudyHour, sep = "_") %>%
+  spread(key = DayHour, value = SurveyCount, fill = 0)
+```
+
+```{r}
+## Filter Rows with Counts of 2 or More
+survey_count_2plus_DEC_EMA <- survey_count_wide_DEC_EMA %>%
+  filter_if(is.numeric, any_vars(. >= 2)) %>%
+  gather(key = "DayHour", value = "SurveyCount", -StudyID) %>%
+  filter(SurveyCount >= 2) %>%
+  separate(DayHour, into = c("StudyDay", "StudyHour"), sep = "_", convert = TRUE)
+```
+
+```{r}
+## Identify EMA Duplicates
+ema_duplicates_long <- survey_count_2plus_DEC_EMA %>%
+  filter(StudyHour %in% 2:5) %>%
+  select(StudyID, StudyDay, StudyHour, SurveyCount)
+
+filtered_three_hours_ema_survey <- filtered_three_hours_ema_survey %>%
+  mutate(StudyDay = as.integer(StudyDay), StudyHour = as.integer(StudyHour))
+
+ema_duplicates <- filtered_three_hours_ema_survey %>%
+  semi_join(ema_duplicates_long, by = c("StudyID", "StudyDay", "StudyHour")) %>%
+  select(StudyID, StudyDay, StudyHour, QCount, recordedDate,finished, everything()) %>%
+  arrange(StudyID, StudyDay, StudyHour)
+```
+
+```{r}
+## View Results
+ema_duplicates
+```
+
