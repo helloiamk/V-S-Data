@@ -12,9 +12,8 @@ library(dplyr)
 library(readr)
 library(tidyr)
 library(kableExtra)
+
 ```
-
-
 
 ```{r}
 # Read in the SMS data using the readxl package
@@ -36,6 +35,7 @@ uniqueStudyID_count <- nrow(uniqueStudyID)
 uniqueStudyID_count
 
 ```
+
 ```{r}
 
 # Read in the V&S Evening Survey
@@ -203,8 +203,6 @@ create_missing_summary(filtered_evening_survey, "Evening Survey")
 create_missing_summary(filtered_three_hours_ema_survey, "3-Hour EMA Survey")
 ```
 
-
-
 ```{r}
 # Convert all columns to character type before processing
 combined_surveys <- bind_rows(
@@ -236,7 +234,6 @@ survey_count_wide
 
 
 ```
-
 
 ```{r}
 # Filter rows with counts of 2 or more
@@ -316,6 +313,8 @@ evening_duplicates <- filtered_evening_survey %>%
 evening_duplicates
 ```
 
+## Generate excel data files for duplication.
+
 ```{r}
 # Load the openxlsx library
 # library(openxlsx)
@@ -387,7 +386,3 @@ generate_diff_excel(evening_duplicates, output_file = "C:/Users/kkk/Downloads/ev
 generate_diff_excel(ema_duplicates, output_file = "C:/Users/kkk/Downloads/ema_duplicates_diff.xlsx")
 
 ```
-
-
-
-
